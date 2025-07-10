@@ -65,8 +65,8 @@ your_project_name/
 ├── app.py                  # Flask web uygulaması
 ├── scrapers/               # Web scraper modüllerinin bulunduğu dizin
 │   ├── techcareer_scraper.py
-│   ├── coderspace_scraper.py  # Henüz geliştirilmemiş placeholder
-│   └── anbean_scraper.py      # Henüz geliştirilmemiş placeholder
+│   ├── coderspace_scraper.py  
+│   └── anbean_scraper.py      
 ├── data/                   # Çekilen verilerin depolandığı dizin
 │   ├── all_events.json     # Tüm etkinlik verileri
 │   └── last_update.json    # Son güncelleme zamanı bilgisi
@@ -81,13 +81,13 @@ your_project_name/
 Projeye katkıda bulunmanızdan mutluluk duyarım! Eğer bir hata bulursanız veya bir özellik eklemek isterseniz:
 
 1.  Repoyu forklayın.
-2.  Yeni bir dal (branch) oluşturun: `git checkout -b feature/eklenecek-ozellik` veya `fix/hata-duzeltme`.
+2.  Yeni bir branch oluşturun: `git checkout -b feature/eklenecek-ozellik` veya `fix/hata-duzeltme`.
 3.  Değişikliklerinizi yapın ve commit edin.
-4.  Fork'unuzdaki dala değişiklikleri itin.
-5.  Bir Pull Request (Çekme İsteği) oluşturun ve değişikliklerinizi açıklayın.
+4.  Fork'unuzdaki branch'e değişiklikleri itin.
+5.  Bir Pull Request oluşturun ve değişikliklerinizi açıklayın.
 
 ## 📜 Lisans
 
-Bu proje MIT Lisansı altında lisanslanmıştır. Daha fazla bilgi için `LICENSE` dosyasına bakın (eğer ekleyecekseniz).
+Bu proje MIT Lisansı altında lisanslanmıştır. Daha fazla bilgi için `LICENSE` dosyasına bakın.
 
 ---
