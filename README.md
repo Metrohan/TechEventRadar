@@ -8,7 +8,6 @@ Bu proje, çeşitli Türk teknoloji ve kariyer platformlarından güncel etkinli
 * **Dinamik Veri Çekimi:** Selenium kullanarak JavaScript ile yüklenen dinamik içerikleri sorunsuz bir şekilde işler.
 * **Kullanıcı Dostu Web Arayüzü:** Çekilen etkinlikleri kategoriye göre gruplandırılmış, görselliği ön planda tutan modern bir arayüzde sunar.
 * **Tek Tıkla Güncelleme:** Web arayüzü üzerinden "Verileri Güncelle" butonu ile en güncel etkinlikleri anında çekme imkanı.
-* **Yüklenme Animasyonu:** Veri güncelleme işlemi sırasında kullanıcıya geri bildirim sağlayan interaktif yüklenme animasyonu.
 * **Durum Takibi:** Etkinliklerin son güncelleme zamanını ve toplam etkinlik sayısını gösterir.
 
 ## 🛠️ Teknolojiler
