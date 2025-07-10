@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TechEventRadar</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>TechEventRadar</h1>
+        
+        <div class="header-info">
+            {% if last_updated %}
+                <p>Son Güncelleme: <strong>{{ last_updated }}</strong></p>
+            {% else %}
+                <p>Henüz etkinlik verisi güncellenmedi.</p>
+            {% endif %}
+            <p>Toplam Açık Etkinlik: <strong>{{ total_event_count }}</strong></p>
+            <a href="{{ url_for('update_data') }}" class="update-button" id="updateButton">Verileri Güncelle</a>
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <ul class="flashes">
+                {% for category, message in messages %}
+                    <li class="{{ category }}">{{ message }}</li>
+                {% endfor %}
+                </ul>
+            {% endif %}
+        {% endwith %}
+
+        {% if grouped_events %}
+            {% for category, events in grouped_events.items() %}
+                <h2>{{ category }} ({{ events|length }})</h2>
+                <div class="event-grid">
+                    {% for event in events %}
+                        <div class="event-card">
+                            {% if event.image_url and event.image_url != 'Resim Bulunamadı' %}
+                                <div class="event-image-container">
+                                    <img src="{{ event.image_url }}" alt="{{ event.title }}" class="event-image">
+                                </div>
+                            {% endif %}
+                            <div class="event-content">
+                                <h3>{{ event.title }}</h3>
+                                <p class="event-date-status">
+                                    <span class="date-text">Son Başvuru:</span> 
+                                    <span class="date-value">{{ event.date }}</span>
+                                </p>
+                                <p class="event-status">Durum: <span class="status-badge status-{{ event.status|lower }}">{{ event.status }}</span></p>
+                                {% if event.link %}
+                                    <a href="{{ event.link }}" target="_blank" rel="noopener noreferrer" class="event-link">Başvur</a>
+                                {% else %}
+                                    <span class="no-link">Link Bulunamadı</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+                <hr>
+            {% endfor %}
+        {% else %}
+            <p>Henüz görüntülenecek etkinlik bulunamadı. Lütfen "Verileri Güncelle" butonuna tıklayın.</p>
+        {% endif %}
+    </div>
+
+    <div id="loadingOverlay" class="loading-overlay">
+        <div class="loading-spinner"></div>
+        <p class="loading-message">Veriler güncelleniyor, lütfen bekleyin...</p>
+        <p class="loading-sub-message">Bu işlem birkaç dakika sürebilir.</p>
+    </div>
+
+    <script>
+        document.getElementById('updateButton').addEventListener('click', function(event) {
+            document.getElementById('loadingOverlay').style.display = 'flex';
+            this.classList.add('disabled');
+            this.style.pointerEvents = 'none';
+            this.textContent = 'Güncelleniyor...';
+        });
+
+        window.addEventListener('load', function() {
+            document.getElementById('loadingOverlay').style.display = 'none';
+        });
+    </script>
+</body>
+</html>
