@@ -78,7 +78,7 @@ your_project_name/
 
 ## 🤝 Katkıda Bulunma
 
-Projeye katkıda bulunmaktan mutluluk duyarım! Eğer bir hata bulursanız veya bir özellik eklemek isterseniz:
+Projeye katkıda bulunmanızdan mutluluk duyarım! Eğer bir hata bulursanız veya bir özellik eklemek isterseniz:
 
 1.  Repoyu forklayın.
 2.  Yeni bir dal (branch) oluşturun: `git checkout -b feature/eklenecek-ozellik` veya `fix/hata-duzeltme`.
