@@ -3,6 +3,7 @@ import sys
 from flask import Flask, render_template, redirect, url_for, flash, send_from_directory
 from datetime import datetime
 import json
+import webbrowser
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 project_root = os.path.abspath(os.path.join(current_dir))
@@ -65,4 +66,8 @@ def favicon():
                                'favicon.ico', mimetype='image/vnd.microsoft.icon')
 
 if __name__ == '__main__':
+    app_url = "http://127.0.0.1:5000/"
+    print(f"Flask uygulaması başlatılıyor. Tarayıcınızda {app_url} adresi açılacak.")
+    webbrowser.open(app_url)
+
     app.run(debug=True)
