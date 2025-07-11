@@ -33,7 +33,7 @@ Projeyi yerel makinenizde kurmak ve çalıştırmak için aşağıdaki adımlar�
 
 1.  **Repoyu Klonlayın:**
     ```bash
-    git clone [https://github.com/Metrohan/TechEventRadar.git](https://github.com/Metrohan/TechEventRadar.git)
+    git clone https://github.com/Metrohan/TechEventRadar.git
     cd TechEventRadar
     ```
 
