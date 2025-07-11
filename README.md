@@ -31,7 +31,7 @@ Projeyi yerel makinenizde kurmak ve çalıştırmak için aşağıdaki adımlar�
 
 ### Adımlar
 
-1.  **Depoyu Klonlayın:**
+1.  **Repoyu Klonlayın:**
     ```bash
     git clone [https://github.com/Metrohan/TechEventRadar.git](https://github.com/Metrohan/TechEventRadar.git)
     cd TechEventRadar
@@ -78,13 +78,7 @@ your_project_name/
 
 ## 🤝 Katkıda Bulunma
 
-Projeye katkıda bulunmanızdan mutluluk duyarım! Eğer bir hata bulursanız veya bir özellik eklemek isterseniz:
-
-1.  Repoyu forklayın.
-2.  Yeni bir branch oluşturun: `git checkout -b feature/eklenecek-ozellik` veya `fix/hata-duzeltme`.
-3.  Değişikliklerinizi yapın ve commit edin.
-4.  Fork'unuzdaki branch'e değişiklikleri itin.
-5.  Bir Pull Request oluşturun ve değişikliklerinizi açıklayın.
+Projeye katkıda bulunmanızdan mutluluk duyarım! Nasıl katkıda bulunabileceğinizi öğrenmek için lütfen [Katkıda Bulunma Rehberi](CONTRIBUTING.md) dosyasını inceleyin.
 
 ## 📜 Lisans
 
