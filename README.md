@@ -65,7 +65,7 @@ your_project_name/
 ├── app.py                  # Flask web uygulaması
 ├── scrapers/               # Web scraper modüllerinin bulunduğu dizin
 │   ├── techcareer_scraper.py
-│   ├── coderspace_scraper.py  
+│   ├── cs_scraper.py  
 │   └── anbean_scraper.py      
 ├── data/                   # Çekilen verilerin depolandığı dizin
 │   ├── all_events.json     # Tüm etkinlik verileri
