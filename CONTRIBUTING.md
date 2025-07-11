@@ -56,7 +56,7 @@ Kod ile katkıda bulunmak isterseniz, lütfen bu adımları takip edin:
     ```
     *Commit mesajı formatı için [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) önerilir.*
 
-7.  **Değişiklikleri Uzak Depoya İtin:**
+7.  **Değişiklikleri Push'layın:**
     ```bash
     git push origin branch-adiniz
     ```
