@@ -28,7 +28,7 @@ Kod ile katkıda bulunmak isterseniz, lütfen bu adımları takip edin:
 1.  **Repoyu Fork edin:** Projenin GitHub reposunu kendi hesabınıza fork edin.
 2.  **Repoyu Klonlayın:** Fork ettiğiniz repoyu yerel makinenize klonlayın.
     ```bash
-    git clone [https://github.com/Metrohan/TechEventRadar.git](https://github.com/Metrohan/TechEventRadar.git)
+    git clone https://github.com/Metrohan/TechEventRadar.git
     cd TechEventRadar
     ```
 3.  **Bağımlılıkları Yükleyin:**
