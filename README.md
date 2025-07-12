@@ -4,11 +4,12 @@ Bu proje, çeşitli Türk teknoloji ve kariyer platformlarından güncel etkinli
 
 ## ✨ Özellikler
 
-* **Çoklu Kaynak Desteği:** TechCareer.net, Coderspace ve Anbean gibi platformlardan veri çekme yeteneği. (Diğer kaynaklar eklenebilir.)
+* **Çoklu Kaynak Desteği:** TechCareer.net, Coderspace ve Anbean gibi platformlardan veri çekme yeteneği.
 * **Dinamik Veri Çekimi:** Selenium kullanarak JavaScript ile yüklenen dinamik içerikleri sorunsuz bir şekilde işler.
 * **Kullanıcı Dostu Web Arayüzü:** Çekilen etkinlikleri kategoriye göre gruplandırılmış, görselliği ön planda tutan modern bir arayüzde sunar.
 * **Tek Tıkla Güncelleme:** Web arayüzü üzerinden "Verileri Güncelle" butonu ile en güncel etkinlikleri anında çekme imkanı.
 * **Durum Takibi:** Etkinliklerin son güncelleme zamanını ve toplam etkinlik sayısını gösterir.
+* **Desteklenen Platformlar:** Coderspace, Youthall, Anbean, Kodluyoruz, Techcareer.
 
 ## 🛠️ Teknolojiler
 
