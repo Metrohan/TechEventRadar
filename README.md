@@ -60,14 +60,16 @@ Projeyi yerel makinenizde kurmak ve çalıştırmak için aşağıdaki adımlar�
 
 ## 📂 Proje Yapısı
 ```bash
-your_project_name/
+TechEventRadar/
 ├── main.py                 # Scraper'ları çalıştıran ana dosya
 ├── data_manager.py         # Çekilen verileri JSON'a kaydeder/yükler
 ├── app.py                  # Flask web uygulaması
 ├── scrapers/               # Web scraper modüllerinin bulunduğu dizin
 │   ├── techcareer_scraper.py
 │   ├── cs_scraper.py  
-│   └── anbean_scraper.py      
+│   ├── kodluyoruz_scraper.py  
+│   ├── youthall_scraper.py 
+│   └── anbean_scraper.py 
 ├── data/                   # Çekilen verilerin depolandığı dizin
 │   ├── all_events.json     # Tüm etkinlik verileri
 │   └── last_update.json    # Son güncelleme zamanı bilgisi
