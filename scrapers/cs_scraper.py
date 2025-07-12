@@ -49,6 +49,13 @@ def scrape_coderspace_events():
             title_link_element = card.find('h5', class_='mt-3')
             if title_link_element:
                 title_link_element = title_link_element.find('a')
+
+            image_element = card.find('img', src=True)
+            if image_element and 'src' in image_element.attrs:
+                raw_image_src = image_element['src'].strip()
+                if raw_image_src:
+                    from urllib.parse import urljoin
+                    image_url = urljoin(url, raw_image_src)
             
             title = title_link_element.text.strip() if title_link_element else "Başlık Bulunamadı"
             link = title_link_element['href'].strip() if title_link_element and 'href' in title_link_element.attrs else "Link Bulunamadı"
@@ -86,7 +93,8 @@ def scrape_coderspace_events():
                     'link': link,
                     'date': last_application_date,
                     'category': category,
-                    'status': 'Açık' 
+                    'status': 'Açık', 
+                    'image_url': image_url
                 })
             # else:
             #     print(f"Kapalı/Bilinmeyen ilan atlandı: {title}")
