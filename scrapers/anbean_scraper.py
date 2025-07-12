@@ -36,7 +36,15 @@ def scrape_anbean_events():
                 if len(spans) == 2 and (spans[0].text.strip() == "Son Başvuru" or spans[0].text.strip() == "Son Kayıt"):
                     last_application_date = spans[1].text.strip()
                     break
-        
+
+        image_element = card.find('img', src=True)
+        if image_element and 'src' in image_element.attrs:
+            raw_image_src = image_element['src'].strip()
+            if raw_image_src:
+                from urllib.parse import urljoin
+                image_url = urljoin(url, raw_image_src)
+
+
         category_div = card.find('div', class_='mini-eventCard-headerType')
         category = category_div.find('span').text.strip() if category_div and category_div.find('span') else "Kategori Bulunamadı"
 
@@ -55,7 +63,8 @@ def scrape_anbean_events():
                 'link': link,
                 'date': last_application_date,
                 'category': category,
-                'status': 'Açık' 
+                'status': 'Açık', 
+                'image_url': image_url
             })
         else:
             #print(f"Kapalı ilan atlandı: {title}")
