@@ -1,3 +1,6 @@
+
+<img width="802" height="420" alt="Başlıksız(1)" src="https://github.com/user-attachments/assets/7528bb63-f02d-48cf-9cb9-f22e822128dd" />
+
 # 🚀 TechEventRadar
 
 Bu proje, çeşitli Türk teknoloji ve kariyer platformlarından güncel etkinlikleri (bootcamp'ler, hackathon'lar, yetenek programları vb.) çekmek, depolamak ve kullanıcı dostu bir web arayüzünde sunmak için geliştirilmiştir. Python, Selenium, BeautifulSoup ve Flask teknolojilerini kullanır.
