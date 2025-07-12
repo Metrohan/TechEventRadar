@@ -34,7 +34,7 @@ def scrape_techcareer_events():
             driver.get(url)
 
             try:
-                WebDriverWait(driver, 15).until( 
+                WebDriverWait(driver, 10).until( 
                     EC.presence_of_element_located((By.CSS_SELECTOR, '[data-test="single-event-box"]'))
                 )
                 print(f"DEBUG: {category_name} - İlk etkinlik kartı bulundu.")
@@ -46,7 +46,7 @@ def scrape_techcareer_events():
             last_height = driver.execute_script("return document.body.scrollHeight")
             previous_event_count = 0
             no_new_content_count = 0
-            max_no_new_content_attempts = 10
+            max_no_new_content_attempts = 2
 
             initial_soup = BeautifulSoup(driver.page_source, 'html.parser')
             previous_event_count = len(initial_soup.find_all(attrs={"data-test": "single-event-box"}))
@@ -115,7 +115,26 @@ def scrape_techcareer_events():
                 if date_element:
                     date = date_element.text.strip()
 
-
+                image_element = card.find('img', attrs={"data-test": "single-event-image"})
+                if image_element and 'src' in image_element.attrs:
+                    full_image_url = image_element['src']
+                    if full_image_url.startswith('/_next/image'):
+                        from urllib.parse import urlparse, parse_qs
+                        parsed_url = urlparse(full_image_url)
+                        query_params = parse_qs(parsed_url.query)
+                        if 'url' in query_params:
+                            image_url_raw = query_params['url'][0]
+                            if not image_url_raw.startswith('http'):
+                                image_url = base_url + image_url_raw
+                            else:
+                                image_url = image_url_raw
+                        else:
+                            image_url = base_url + full_image_url
+                    elif not full_image_url.startswith('http'):
+                        image_url = base_url + full_image_url
+                    else:
+                        image_url = full_image_url
+                
                 open_button = card.find('button', attrs={"data-test": "single-event-open-btn"})
                 closed_button = card.find('button', attrs={"data-test": "single-event-closed-btn"})
                 
@@ -132,7 +151,8 @@ def scrape_techcareer_events():
                         'link': link,
                         'date': date,
                         'category': category_name,
-                        'status': status
+                        'status': status,
+                        'image_url': image_url
                     })
                 # else:
                 #     print(f"Kapalı/Bilinmeyen ilan atlandı: {title} (Kategori: {category_name}, Durum: {status})")
