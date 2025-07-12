@@ -1,72 +1,72 @@
 import os
 import sys
 from datetime import datetime
+import json
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 project_root = os.path.abspath(os.path.join(current_dir))
 sys.path.insert(0, project_root)
 
+
 from scrapers.techcareer_scraper import scrape_techcareer_events
 from scrapers.cs_scraper import scrape_coderspace_events
 from scrapers.anbean_scraper import scrape_anbean_events
+from scrapers.kodluyoruz_scraper import scrape_kodluyoruz_events
+from scrapers.youthall_scraper import scrape_youthall_events
 
-from data_manager import save_events_to_json, load_events_from_json
+from data_manager import save_events_to_json, load_events_from_json, DATA_DIR
 
-def scrape_all_sources():
-    all_scraped_events = []
 
-    print("\n--- 1. Scraper Başlatılıyor ---")
+def scrape_source(scraper_func, source_name):
+    print(f"\n--- {source_name} Scraper Başlatılıyor ---")
     try:
-        techcareer_events = scrape_techcareer_events()
-        if techcareer_events:
-            print(f"TechCareer.net'ten {len(techcareer_events)} açık etkinlik çekildi.")
-            all_scraped_events.extend(techcareer_events)
+        events = scraper_func()
+        if events:
+            print(f"{source_name}'ten {len(events)} açık etkinlik çekildi.")
+            return events
         else:
-            print("TechCareer.net'ten etkinlik çekilemedi veya hiç açık etkinlik bulunamadı.")
+            print(f"{source_name}'ten etkinlik çekilemedi veya hiç açık etkinlik bulunamadı.")
+            return []
     except Exception as e:
-        print(f"Hata: 1. scraper çalışırken bir sorun oluştu: {e}")
+        print(f"Hata: {source_name} scraper çalışırken bir sorun oluştu: {e}")
         import traceback
         traceback.print_exc()
-
-    print("\n--- 2. Scraper Başlatılıyor ---")
-    try:
-        coderspace_events = scrape_coderspace_events()
-        if coderspace_events:
-            print(f"Coderspace'ten {len(coderspace_events)} açık etkinlik çekildi.")
-            all_scraped_events.extend(coderspace_events)
-        else:
-            print("Coderspace'ten etkinlik çekilemedi veya hiç açık etkinlik bulunamadı.")
-    except Exception as e:
-        print(f"Hata: 2. scraper çalışırken bir sorun oluştu: {e}")
-        import traceback
-        traceback.print_exc()
-
-    print("\n--- 3. Scraper Başlatılıyor ---")
-    try:
-        anbean_events = scrape_anbean_events()
-        if anbean_events:
-            print(f"Anbean'dan {len(anbean_events)} açık etkinlik çekildi.")
-            all_scraped_events.extend(anbean_events)
-        else:
-            print("Anbean'dan etkinlik çekilemedi veya hiç açık etkinlik bulunamadı.")
-    except Exception as e:
-        print(f"Hata: 3. scraper çalışırken bir sorun oluştu: {e}")
-        import traceback
-        traceback.print_exc()
-
-    return all_scraped_events
+        return []
 
 def run_scraper_and_save():
     print(f"--- Etkinlik Çekme Süreci Başlatıldı: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} ---")
-    scraped_events = scrape_all_sources()
+    all_scraped_events = []
+    
+    scrapers_to_run = [
+        (scrape_techcareer_events, "TechCareer.net"),
+        (scrape_coderspace_events, "Coderspace"),
+        (scrape_anbean_events, "Anbean"),
+        (scrape_kodluyoruz_events, "Kodluyoruz"),
+        (scrape_youthall_events, "Youthall")
+    ]
+    with ThreadPoolExecutor(max_workers=5) as executor:
 
-    if scraped_events:
-        print(f"\nToplam {len(scraped_events)} açık etkinlik çekildi tüm kaynaklardan.")
-        save_events_to_json(scraped_events, "all_events.json")
+        futures = {executor.submit(scrape_source, func, name): name for func, name in scrapers_to_run}
+
+        for future in as_completed(futures):
+            source_name = futures[future]
+            try:
+                events = future.result()
+                all_scraped_events.extend(events)
+            except Exception as exc:
+                print(f'{source_name} scraper bir istisna üretti: {exc}')
+                import traceback
+                traceback.print_exc()
+
+    if all_scraped_events:
+        print(f"\nToplam {len(all_scraped_events)} açık etkinlik çekildi tüm kaynaklardan.")
+        save_events_to_json(all_scraped_events, "all_events.json")
     else:
         print("\nHiç açık etkinlik bulunamadı veya çekilemedi tüm kaynaklardan.")
+    
     print(f"\n--- Etkinlik Çekme Süreci Tamamlandı: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} ---")
-    return scraped_events
+    return all_scraped_events
 
 if __name__ == "__main__":
     run_scraper_and_save()
