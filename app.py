@@ -66,8 +66,8 @@ def favicon():
                                'favicon.ico', mimetype='image/vnd.microsoft.icon')
 
 if __name__ == '__main__':
+    reloader = False
     app_url = "http://127.0.0.1:5000/"
     print(f"Flask uygulaması başlatılıyor. Tarayıcınızda {app_url} adresi açılacak.")
     webbrowser.open(app_url)
-
-    app.run(debug=True)
+    app.run(debug=True, use_reloader=reloader)
