@@ -61,12 +61,34 @@ Projeyi yerel makinenizde kurmak ve çalıştırmak için aşağıdaki adımlar�
 5.  **Tarayıcınızda Açın:**
     `app.py` başlatıldıktan sonra tarayıcınızda otomatik olarak açılacaktır. Etkinlikleri görüntüleyebilir ve "Verileri Güncelle" butonuna tıklayarak verileri web arayüzünden güncelleyebilirsiniz.
 
+
+## 🚀 Otomatik Çalıştırma Scriptleri
+
+Projeyi daha kolay çalıştırmak için platforma özel scriptleri kullanabilirsiniz. Bu scriptler, önkoşulları kontrol eder ve bağımlılıkları yükler.
+
+**Windows İçin (run_scraper.bat) 💻**
+
+run_scraper.bat dosyasına çift tıklayarak veya Komut İstemi'nden çalıştırabilirsiniz:
+```bash
+.\run_scraper.bat
+```
+**Linux / macOS İçin (run_scraper.sh) 🐧🍏**
+
+Terminalden run_scraper.sh dosyasına çalıştırma izni verin ve ardından çalıştırın:
+
+```bash
+chmod +x run_scraper.sh
+./run_scraper.sh
+```
+
 ## 📂 Proje Yapısı
 ```bash
 TechEventRadar/
 ├── main.py                 # Scraper'ları çalıştıran ana dosya
 ├── data_manager.py         # Çekilen verileri JSON'a kaydeder/yükler
 ├── app.py                  # Flask web uygulaması
+├── run_scraper.sh          # Linux/macOS için otomatik çalıştırma scripti
+├── run_scraper.bat         # Windows için otomatik çalıştırma scripti
 ├── scrapers/               # Web scraper modüllerinin bulunduğu dizin
 │   ├── techcareer_scraper.py
 │   ├── cs_scraper.py  
