@@ -1,73 +1,91 @@
 import os
-import sys
-from flask import Flask, render_template, redirect, url_for, flash, send_from_directory
+from flask import Flask, jsonify, request
+from scrapers.youthall_scraper import scrape_youthall_events
+from models import db, Event
+from sqlalchemy.exc import IntegrityError
 from datetime import datetime
-import json
-import webbrowser
-
-current_dir = os.path.dirname(os.path.abspath(__file__))
-project_root = os.path.abspath(os.path.join(current_dir))
-sys.path.insert(0, project_root)
-
-from data_manager import load_events_from_json, DATA_DIR
-from main import run_scraper_and_save
 
 app = Flask(__name__)
-app.secret_key = 'super_secret_key'
 
-LAST_UPDATE_FILE = os.path.join(DATA_DIR, 'last_update.json')
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///events.db')
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-def get_last_update_time():
-    if os.path.exists(LAST_UPDATE_FILE):
-        with open(LAST_UPDATE_FILE, 'r') as f:
-            data = json.load(f)
-            return data.get('last_updated')
-    return None
+db.init_app(app)
 
-def set_last_update_time():
-    os.makedirs(DATA_DIR, exist_ok=True)
-    with open(LAST_UPDATE_FILE, 'w') as f:
-        json.dump({'last_updated': datetime.now().strftime('%Y-%m-%d %H:%M:%S')}, f)
+def save_events_to_db(events_data, platform_name):
+    with app.app_context():
+        new_events_count = 0
+        for event_data in events_data:
+            try:
+                existing_event = Event.query.filter_by(url=event_data['url']).first()
+                if existing_event:
+                    continue
 
-@app.route('/')
-def index():
-    events = load_events_from_json("all_events.json")
-    last_updated = get_last_update_time()
+                new_event = Event(
+                    platform=platform_name,
+                    title=event_data['title'],
+                    url=event_data['url'],
+                    start_date=event_data.get('start_date'),
+                    end_date=event_data.get('end_date'),
+                    application_deadline=event_data.get('application_deadline'),
+                    category=event_data.get('category'),
+                    is_paid=event_data.get('is_paid'),
+                    image_url=event_data.get('image_url'),
+                    location=event_data.get('location')
+                )
+                db.session.add(new_event)
+                new_events_count += 1
+            except Exception as e:
+                print(f"Etkinlik eklenirken hata oluştu (URL: {event_data.get('url')}): {e}")
+                db.session.rollback()
+        
+        try:
+            db.session.commit()
+            print(f"Veritabanına {new_events_count} yeni etkinlik kaydedildi.")
+        except IntegrityError:
+            db.session.rollback() 
+            print("Veritabanına kaydederken URL benzersizlik hatası oluştu. Bazı etkinlikler atlanmış olabilir.")
+        except Exception as e:
+            db.session.rollback()
+            print(f"Genel bir veritabanı kaydetme hatası oluştu: {e}")
+
+@app.route('/events', methods=['GET'])
+def get_events():
+    category = request.args.get('category')
+    is_paid_param = request.args.get('is_paid')
+
+    query = Event.query
+
+    if category:
+        query = query.filter_by(category=category)
     
-    grouped_events = {}
-    for event in events:
-        category = event.get('category', 'Diğer')
-        if category not in grouped_events:
-            grouped_events[category] = []
-        grouped_events[category].append(event)
+    if is_paid_param:
+        is_paid = True if is_paid_param.lower() == 'true' else False if is_paid_param.lower() == 'false' else None
+        if is_paid is not None:
+            query = query.filter_by(is_paid=is_paid)
 
-    return render_template('index.html', grouped_events=grouped_events, 
-                           last_updated=last_updated,
-                           total_event_count=len(events))
+    events = query.order_by(Event.timestamp.desc()).limit(100).all() 
+    return jsonify([event.to_dict() for event in events])
 
-@app.route('/update_data')
-def update_data():
-    print("\n[FLASK]: Veri güncelleme isteği alındı. Scraper çalıştırılıyor...")
-    try:
-        run_scraper_and_save()
-        set_last_update_time()
-        flash('Etkinlik verileri başarıyla güncellendi!', 'success')
-    except Exception as e:
-        flash(f'Veri güncellenirken bir hata oluştu: {e}', 'error')
-        print(f"Hata: Scraper çağrılırken sorun oluştu: {e}")
-        import traceback
-        traceback.print_exc()
-    
-    return redirect(url_for('index'))
 
-@app.route('/favicon.ico')
-def favicon():
-    return send_from_directory(os.path.join(app.root_path, 'static'),
-                               'favicon.ico', mimetype='image/vnd.microsoft.icon')
+@app.cli.command('create-db')
+def create_db_command():
+    """Veritabanı tablolarını oluşturur."""
+    with app.app_context():
+        db.create_all()
+        print('Veritabanı tabloları oluşturuldu/güncellendi.')
 
 if __name__ == '__main__':
-    reloader = False
-    app_url = "http://127.0.0.1:5000/"
-    print(f"Flask uygulaması başlatılıyor. Tarayıcınızda {app_url} adresi açılacak.")
-    webbrowser.open(app_url)
-    app.run(debug=True, use_reloader=reloader)
+    # Geliştirme ortamında veritabanı tablolarını oluşturmak için:
+    # `flask create-db` komutunu terminalde çalıştırın
+    # Veya aşağıdaki satırı geçici olarak uncomment edebilirsiniz.
+    # with app.app_context():
+    #     db.create_all()
+    
+    # Scraper'ı burada manuel olarak çalıştırmak isterseniz (geliştirme için)
+    # print("Youthall etkinlikleri cekiliyor...")
+    # youthall_events = scrape_youthall_events()
+    # save_events_to_db(youthall_events, "Youthall")
+    # print("Scraper calismasi tamamlandi.")
+
+    app.run(debug=True, host='0.0.0.0', port=5000)
