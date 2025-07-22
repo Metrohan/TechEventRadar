@@ -3,3 +3,8 @@ selenium
 beautifulsoup4
 webdriver-manager
 python-dotenv
+gunicorn
+beautifulsoup4
+psycopg2-binary
+SQLAlchemy
+Flask-SQLAlchemy
