@@ -7,6 +7,24 @@ from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
 from bs4 import BeautifulSoup
 import time
+from urllib.parse import urljoin
+from datetime import datetime
+
+def parse_coderspace_date(date_string):
+    months_turkish = {
+        'Ocak': 1, 'Şubat': 2, 'Mart': 3, 'Nisan': 4, 'Mayıs': 5, 'Haziran': 6,
+        'Temmuz': 7, 'Ağustos': 8, 'Eylül': 9, 'Ekim': 10, 'Kasım': 11, 'Aralık': 12
+    }
+    try:
+        parts = date_string.split()
+        day = int(parts[0])
+        month = months_turkish.get(parts[1])
+        year = int(parts[2])
+        if month:
+            return datetime(year, month, day)
+    except (ValueError, KeyError):
+        return None
+    return None
 
 def scrape_coderspace_events():
     url = "https://coderspace.io/etkinlikler"
@@ -27,7 +45,6 @@ def scrape_coderspace_events():
     try:
         driver.get(url)
 
-       
         WebDriverWait(driver, 20).until(
             EC.presence_of_element_located((By.CSS_SELECTOR, 'div.events-live-list div.col-12'))
         )
@@ -50,54 +67,50 @@ def scrape_coderspace_events():
             if title_link_element:
                 title_link_element = title_link_element.find('a')
 
-            image_element = card.find('img', src=True)
-            if image_element and 'src' in image_element.attrs:
-                raw_image_src = image_element['src'].strip()
-                if raw_image_src:
-                    from urllib.parse import urljoin
-                    image_url = urljoin(url, raw_image_src)
-            
             title = title_link_element.text.strip() if title_link_element else "Başlık Bulunamadı"
-            link = title_link_element['href'].strip() if title_link_element and 'href' in title_link_element.attrs else "Link Bulunamadı"
+            link = title_link_element['href'].strip() if title_link_element and 'href' in title_link_element.attrs else None
             
-            if link != "Link Bulunamadı" and not link.startswith('http'):
-                link = "https://coderspace.io" + link
+            if link and not link.startswith('http'):
+                link = urljoin(url, link)
 
-            last_application_date = "Tarih Bulunamadı"
+            last_application_date_str = "Tarih Bulunamadı"
             info_list = card.find('ul', class_='event-card-info')
             if info_list:
                 for item in info_list.find_all('li'):
                     spans = item.find_all('span')
                     strong_tag = item.find('strong')
                     if len(spans) > 0 and spans[0].text.strip() == "Son Başvuru" and strong_tag:
-                        last_application_date = strong_tag.text.strip()
+                        last_application_date_str = strong_tag.text.strip()
                         break
+            
+            event_date_obj = parse_coderspace_date(last_application_date_str)
             
             category_element = card.find('span', class_='event-card-type')
             category = category_element.text.strip() if category_element else "Kategori Bulunamadı"
 
             is_application_open = False 
-            
             main_button = card.find('a', class_='primary-button--big')
             
             if main_button:
-
                 if 'primary-button--disabled' in main_button.get('class', []):
                     is_application_open = False
                 else:
                     is_application_open = True
-
-            if is_application_open:
+            
+            description = f"{category} kategorisindeki Coderspace etkinliği."
+            location = "Online"
+            if is_application_open and link and title != "Başlık Bulunamadı":
                 events.append({
                     'title': title,
-                    'link': link,
-                    'date': last_application_date,
-                    'category': category,
-                    'status': 'Açık', 
-                    'image_url': image_url
+                    'description': description,
+                    'date': event_date_obj,
+                    'location': location,
+                    'url': link,
+                    'source': "Coderspace",
+                    'is_active': is_application_open
                 })
             # else:
-            #     print(f"Kapalı/Bilinmeyen ilan atlandı: {title}")
+            #     print(f"Coderspace: Kapalı/Bilinmeyen ilan atlandı: {title}")
 
     except Exception as e:
         print(f"Coderspace çekilirken hata oluştu: {e}")
@@ -113,11 +126,13 @@ if __name__ == "__main__":
     if coderspace_events:
         print("\n--- Coderspace Açık Etkinlikler ---")
         for event in coderspace_events:
-            print(f"Başlık: {event['title']}")
-            print(f"Link: {event['link']}")
-            print(f"Tarih: {event['date']}")
-            print(f"Kategori: {event['category']}")
-            print(f"Durum: {event['status']}")
+            print(f"Başlık: {event.get('title')}")
+            print(f"Açıklama: {event.get('description')}")
+            print(f"Tarih: {event.get('date')}")
+            print(f"Konum: {event.get('location')}")
+            print(f"URL: {event.get('url')}")
+            print(f"Kaynak: {event.get('source')}")
+            print(f"Aktif mi: {event.get('is_active')}")
             print("------------------------------------")
     else:
         print("Coderspace'te açık etkinlik bulunamadı veya çekilirken sorun oluştu.")

@@ -7,6 +7,18 @@ from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
 from bs4 import BeautifulSoup
 import time 
+from urllib.parse import urlparse, parse_qs, urljoin
+from datetime import datetime
+
+def parse_techcareer_date(date_string):
+    try:
+        if '.' in date_string:
+            return datetime.strptime(date_string, '%d.%m.%Y')
+        elif '/' in date_string:
+            return datetime.strptime(date_string, '%d/%m/%Y')
+    except ValueError:
+        return None
+    return None
 
 def scrape_techcareer_events():
     base_url = "https://www.techcareer.net"
@@ -54,20 +66,15 @@ def scrape_techcareer_events():
 
 
             while True:
-
                 driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
                 print(f"DEBUG: {category_name} - Sayfa aşağı kaydırıldı.")
                 time.sleep(4)
 
-
                 new_height = driver.execute_script("return document.body.scrollHeight")
-
-
                 current_soup = BeautifulSoup(driver.page_source, 'html.parser')
                 current_event_count = len(current_soup.find_all(attrs={"data-test": "single-event-box"}))
                 
                 print(f"DEBUG: {category_name} - Şu anki etkinlik sayısı: {current_event_count}, Yeni Sayfa Yüksekliği: {new_height}")
-
 
                 if new_height == last_height and current_event_count == previous_event_count:
                     no_new_content_count += 1
@@ -81,10 +88,7 @@ def scrape_techcareer_events():
                 last_height = new_height
                 previous_event_count = current_event_count
                 
-
             soup = BeautifulSoup(driver.page_source, 'html.parser')
-
-
             event_cards = soup.find_all(attrs={"data-test": "single-event-box"})
 
             if not event_cards:
@@ -92,70 +96,52 @@ def scrape_techcareer_events():
             else:
                 print(f"DEBUG: {category_name} - Toplam bulunan etkinlik kartı sayısı (final): {len(event_cards)}")
 
-
             for card in event_cards:
                 title = "Başlık Bulunamadı"
-                link = "Link Bulunamadı"
-                date = "Tarih Bulunamadı"
-                status = "Bilinmiyor"
+                link = None
+                last_application_date_str = "Tarih Bulunamadı"
+                is_active = False
                 
-
                 if 'href' in card.attrs:
                     link = card['href'].strip()
                     if not link.startswith('http'):
                         link = base_url + link
 
-
                 title_element = card.find('h3', attrs={"data-test": "single-event-title"})
                 if title_element:
                     title = title_element.text.strip()
                 
-
                 date_element = card.find('div', attrs={"data-test": "single-event-date"})
                 if date_element:
-                    date = date_element.text.strip()
+                    last_application_date_str = date_element.text.strip()
 
-                image_element = card.find('img', attrs={"data-test": "single-event-image"})
-                if image_element and 'src' in image_element.attrs:
-                    full_image_url = image_element['src']
-                    if full_image_url.startswith('/_next/image'):
-                        from urllib.parse import urlparse, parse_qs
-                        parsed_url = urlparse(full_image_url)
-                        query_params = parse_qs(parsed_url.query)
-                        if 'url' in query_params:
-                            image_url_raw = query_params['url'][0]
-                            if not image_url_raw.startswith('http'):
-                                image_url = base_url + image_url_raw
-                            else:
-                                image_url = image_url_raw
-                        else:
-                            image_url = base_url + full_image_url
-                    elif not full_image_url.startswith('http'):
-                        image_url = base_url + full_image_url
-                    else:
-                        image_url = full_image_url
-                
+                event_date_obj = parse_techcareer_date(last_application_date_str)
+
+                description = f"{category_name} kategorisindeki TechCareer.net etkinliği."
+                location = "Online"
+
                 open_button = card.find('button', attrs={"data-test": "single-event-open-btn"})
                 closed_button = card.find('button', attrs={"data-test": "single-event-closed-btn"})
                 
                 if open_button:
-                    status = "Açık"
+                    is_active = True
                 elif closed_button:
-                    status = "Kapalı"
+                    is_active = False
                 else:
-                    status = "Bilinmiyor" 
+                    is_active = False
 
-                if status == "Açık" and title != "Başlık Bulunamadı": 
+                if is_active and link and title != "Başlık Bulunamadı": 
                     all_events.append({
                         'title': title,
-                        'link': link,
-                        'date': date,
-                        'category': category_name,
-                        'status': status,
-                        'image_url': image_url
+                        'description': description,
+                        'date': event_date_obj,
+                        'location': location,
+                        'url': link,
+                        'source': "TechCareer.net",
+                        'is_active': is_active
                     })
                 # else:
-                #     print(f"Kapalı/Bilinmeyen ilan atlandı: {title} (Kategori: {category_name}, Durum: {status})")
+                #     print(f"TechCareer.net: Kapalı/Bilinmeyen ilan atlandı: {title} (Kategori: {category_name}, Durum: {status})")
 
     except Exception as e:
         print(f"TechCareer.net çekilirken genel bir hata oluştu: {e}")
@@ -172,11 +158,13 @@ if __name__ == "__main__":
     if techcareer_events:
         print("\n--- TechCareer.net Açık Etkinlikler ---")
         for event in techcareer_events:
-            print(f"Kategori: {event['category']}")
-            print(f"Başlık: {event['title']}")
-            print(f"Link: {event['link']}")
-            print(f"Tarih: {event['date']}")
-            print(f"Durum: {event['status']}")
+            print(f"Başlık: {event.get('title')}")
+            print(f"Açıklama: {event.get('description')}")
+            print(f"Tarih: {event.get('date')}")
+            print(f"Konum: {event.get('location')}")
+            print(f"URL: {event.get('url')}")
+            print(f"Kaynak: {event.get('source')}")
+            print(f"Aktif mi: {event.get('is_active')}")
             print("------------------------------------")
     else:
         print("TechCareer.net'te açık etkinlik bulunamadı veya çekilirken sorun oluştu.")

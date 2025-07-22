@@ -1,5 +1,7 @@
 import requests
 from bs4 import BeautifulSoup
+from datetime import datetime
+from urllib.parse import urljoin
 
 def scrape_anbean_events():
     url = "https://anbeankampus.co/etkinlikler/"
@@ -22,31 +24,34 @@ def scrape_anbean_events():
 
     for card in event_cards:
         main_link_element = card.find('a', title=True)
-        link = main_link_element['href'].strip() if main_link_element and 'href' in main_link_element.attrs else "Link Bulunamadı"
-        if link != "Link Bulunamadı" and not link.startswith('http'):
-            link = "https://anbeankampus.co" + link
+        link = main_link_element['href'].strip() if main_link_element and 'href' in main_link_element.attrs else None
+        if link and not link.startswith('http'):
+            link = urljoin(url, link)
 
         title = main_link_element['title'].strip() if main_link_element and 'title' in main_link_element.attrs else "Başlık Bulunamadı"
 
         date_items = card.find('div', class_='mini-eventCard-dates')
-        last_application_date = "Tarih Bulunamadı"
+        last_application_date_str = "Tarih Bulunamadı"
         if date_items:
             for item in date_items.find_all('div', class_='mini-eventCard-dateItem'):
                 spans = item.find_all('span')
                 if len(spans) == 2 and (spans[0].text.strip() == "Son Başvuru" or spans[0].text.strip() == "Son Kayıt"):
-                    last_application_date = spans[1].text.strip()
+                    last_application_date_str = spans[1].text.strip()
                     break
+        
+        event_date_obj = None
+        if last_application_date_str != "Tarih Bulunamadı":
+            try:
+                if '.' in last_application_date_str:
+                    event_date_obj = datetime.strptime(last_application_date_str, '%d.%m.%Y')
+                elif '/' in last_application_date_str:
+                    event_date_obj = datetime.strptime(last_application_date_str, '%d/%m/%Y')
+            except ValueError:
+                print(f"Uyarı: Anbean etkinliği için tarih formatı tanınamadı: {last_application_date_str}")
+                event_date_obj = None
 
-        image_element = card.find('img', src=True)
-        if image_element and 'src' in image_element.attrs:
-            raw_image_src = image_element['src'].strip()
-            if raw_image_src:
-                from urllib.parse import urljoin
-                image_url = urljoin(url, raw_image_src)
-
-
-        category_div = card.find('div', class_='mini-eventCard-headerType')
-        category = category_div.find('span').text.strip() if category_div and category_div.find('span') else "Kategori Bulunamadı"
+        description = "Anbean Kampüs etkinliği."
+        location = "Online"
 
         is_application_open = False
         status_closed_badge = card.find('span', class_='mini-eventCard-statusBadge text-danger')
@@ -57,17 +62,21 @@ def scrape_anbean_events():
             if detail_button and "Detaylı Bilgi" in detail_button.text:
                 is_application_open = True
 
-        if is_application_open:
+        if is_application_open and link and title != "Başlık Bulunamadı":
             events.append({
                 'title': title,
-                'link': link,
-                'date': last_application_date,
-                'category': category,
-                'status': 'Açık', 
-                'image_url': image_url
+                'description': description,
+                'date': event_date_obj,
+                'location': location,
+                'url': link,
+                'source': "Anbean",
+                'is_active': True
             })
         else:
-            #print(f"Kapalı ilan atlandı: {title}")
+            if title != "Başlık Bulunamadı":
+                print(f"Anbean: Kapalı ilan atlandı veya gerekli bilgi eksik: {title}")
+            else:
+                print("Anbean: Bilgisi eksik veya kapalı bir etkinlik kartı atlandı.")
             pass
 
     return events
@@ -77,12 +86,13 @@ if __name__ == "__main__":
     if open_events:
         print("\n--- Anbean Kampüs Açık Etkinlikler ---")
         for event in open_events:
-            print(f"Başlık: {event['title']}")
-            print(f"Link: {event['link']}")
-            print(f"Tarih: {event['date']}")
-            print(f"Tür: {event['category']}")
-            print(f"Durum: {event['status']}")
+            print(f"Başlık: {event.get('title')}")
+            print(f"Açıklama: {event.get('description')}")
+            print(f"Tarih: {event.get('date')}")
+            print(f"Konum: {event.get('location')}")
+            print(f"URL: {event.get('url')}")
+            print(f"Kaynak: {event.get('source')}")
+            print(f"Aktif mi: {event.get('is_active')}")
             print("------------------------------------")
-
     else:
         print("Anbean Kampüs'te açık etkinlik bulunamadı.")

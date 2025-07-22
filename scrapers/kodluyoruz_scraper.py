@@ -7,7 +7,18 @@ from selenium.webdriver.support import expected_conditions as EC
 import time
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin
+from datetime import datetime
 MAX_LOAD_ATTEMPTS = 0
+
+def parse_kodluyoruz_date(date_string):
+    try:
+        if '.' in date_string:
+            return datetime.strptime(date_string, '%d.%m.%Y')
+        elif '/' in date_string:
+            return datetime.strptime(date_string, '%d/%m/%Y')
+    except ValueError:
+        return None
+    return None
 
 def scrape_kodluyoruz_events():
     url = "https://www.kodluyoruz.org/programlar"
@@ -56,11 +67,10 @@ def scrape_kodluyoruz_events():
 
         for card in event_cards:
             title = "Başlık Bulunamadı"
-            link = "Link Bulunamadı"
-            date = "Tarih Bulunamadı"
-            image_url = "Resim Bulunamadı"
+            link = None
+            last_application_date_str = "Tarih Bulunamadı"
             category = "Kategori Bulunamadı"
-            status = "Bilinmiyor"
+            is_active = False
 
             title_element = card.find('h5', class_='program-ad programlar')
             if title_element:
@@ -75,22 +85,17 @@ def scrape_kodluyoruz_events():
                 detail_label = div.find('div', class_='program-detail')
                 detail_value = div.find('div', class_='program-detail-tarih')
                 if detail_label and detail_value and "Son Başvuru Tarihi:" in detail_label.text:
-                    date = detail_value.text.strip()
+                    last_application_date_str = detail_value.text.strip()
                     break
-
-            image_element = card.find('img', class_='program-img')
-            if image_element and 'src' in image_element.attrs:
-                raw_image_src = image_element['src'].strip()
-                if raw_image_src:
-                    image_url = urljoin(base_url, raw_image_src)
             
+            event_date_obj = parse_kodluyoruz_date(last_application_date_str)
+
             format_category_element = card.find('div', class_='program-format')
             if format_category_element:
                 category = format_category_element.text.strip()
             else:
                 category = "Program"
 
-            status = "Kapalı"
             active_apply_button = None
             apply_buttons = card.find_all('a', class_='program-btn', text="Şimdi Başvur")
             for btn in apply_buttons:
@@ -99,21 +104,25 @@ def scrape_kodluyoruz_events():
                     break
 
             if active_apply_button:
-                status = "Açık"
+                is_active = True
             else:
-                status = "Kapalı"
+                is_active = False
 
-            if status == "Açık" and title != "Başlık Bulunamadı" and link != "Link Bulunamadı":
+            description = f"{category} kategorisindeki Kodluyoruz programı."
+            location = "Online"
+
+            if is_active and link and title != "Başlık Bulunamadı":
                 events.append({
                     'title': title,
-                    'link': link,
-                    'date': date,
-                    'category': category,
-                    'status': status, 
-                    'image_url': image_url
+                    'description': description,
+                    'date': event_date_obj,
+                    'location': location,
+                    'url': link,
+                    'source': "Kodluyoruz",
+                    'is_active': is_active
                 })
-            else:
-                pass
+            # else:
+            #     print(f"Kodluyoruz: Kapalı ilan atlandı: {title}")
 
         print(f"Kodluyoruz'dan {len(events)} açık etkinlik başarıyla çekildi.")
         return events
@@ -131,12 +140,13 @@ if __name__ == "__main__":
     if open_events:
         print("\n--- Kodluyoruz Açık Etkinlikler ---")
         for event in open_events:
-            print(f"Başlık: {event['title']}")
-            print(f"Link: {event['link']}")
-            print(f"Tarih: {event['date']}")
-            print(f"Tür: {event['category']}")
-            print(f"Durum: {event['status']}")
-            print(f"Görsel URL: {event['image_url']}")
+            print(f"Başlık: {event.get('title')}")
+            print(f"Açıklama: {event.get('description')}")
+            print(f"Tarih: {event.get('date')}")
+            print(f"Konum: {event.get('location')}")
+            print(f"URL: {event.get('url')}")
+            print(f"Kaynak: {event.get('source')}")
+            print(f"Aktif mi: {event.get('is_active')}")
             print("------------------------------------")
     else:
         print("Kodluyoruz'da açık etkinlik bulunamadı.")

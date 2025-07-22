@@ -11,26 +11,28 @@ from datetime import datetime
 MAX_LOAD_ATTEMPTS = 2
 
 def parse_turkish_date(date_string):
-    """
-    Türkçe tarih stringini datetime objesine çevirir.
-    Örnek: "11 Ağustos 2025 Pzt 12:00" veya "10 Ağustos 2025 Paz"
-    """
     months_turkish = {
         'Ocak': 1, 'Şubat': 2, 'Mart': 3, 'Nisan': 4, 'Mayıs': 5, 'Haziran': 6,
         'Temmuz': 7, 'Ağustos': 8, 'Eylül': 9, 'Ekim': 10, 'Kasım': 11, 'Aralık': 12
     }
     
-    parts = date_string.split()
-    day = int(parts[0])
-    month = months_turkish[parts[1]]
-    year = int(parts[2])
-    
-    if len(parts) > 4:
-        time_part = parts[4]
-        hour, minute = map(int, time_part.split(':'))
-        return datetime(year, month, day, hour, minute)
-    else:
-        return datetime(year, month, day)
+    try:
+        parts = date_string.split()
+        day = int(parts[0])
+        month = months_turkish[parts[1]]
+        year = int(parts[2])
+        
+        if len(parts) > 4 and ':' in parts[4]:
+            time_part = parts[4]
+            hour, minute = map(int, time_part.split(':'))
+            return datetime(year, month, day, hour, minute)
+        elif len(parts) == 3 or (len(parts) == 4 and not ':' in parts[3]):
+            return datetime(year, month, day)
+        else:
+            return None
+    except (ValueError, KeyError) as e:
+        # print(f"Hata: Tarih parse edilemedi: '{date_string}' - {e}")
+        return None
 
 def get_event_details(driver, event_url):
     """
@@ -39,6 +41,8 @@ def get_event_details(driver, event_url):
     event_start_date_str = "Başlangıç Tarihi Bulunamadı"
     event_end_date_str = "Bitiş Tarihi Bulunamadı"
     application_deadline_str = "Son Başvuru Tarihi Bulunamadı"
+    location_str = "Konum Bulunamadı"
+    description_str = "Açıklama Bulunamadı"
 
     try:
         driver.get(event_url)
@@ -68,10 +72,30 @@ def get_event_details(driver, event_url):
                     elif "Son Başvuru" in title:
                         application_deadline_str = date_text
         
+        description_div = detail_soup.find('div', class_='events_detail__content')
+        if description_div:
+            p_tag = description_div.find('p')
+            if p_tag:
+                description_str = p_tag.text.strip()
+            elif description_div.text.strip():
+                description_str = description_div.text.strip()
+            else:
+                description_str = "Etkinlik detay sayfasında açıklama bulunamadı."
+        
+        location_element = detail_soup.find('div', class_='events_detail__content').find('span', string='Konum:')
+        if location_element:
+            location_str = location_element.find_next_sibling('span').text.strip()
+        else:
+            if "online" in detail_soup.get_text().lower():
+                location_str = "Online"
+            else:
+                location_str = "Yerinde / Online Bilinmiyor"
+
+
     except Exception as e:
         print(f"Hata: Etkinlik detayları çekilirken sorun oluştu {event_url}: {e}")
     
-    return event_start_date_str, event_end_date_str, application_deadline_str
+    return event_start_date_str, event_end_date_str, application_deadline_str, location_str, description_str
 
 
 def scrape_youthall_events():
@@ -89,7 +113,7 @@ def scrape_youthall_events():
     driver = webdriver.Chrome(service=service, options=options)
 
     all_events = []
-    current_date = datetime.now() # Mevcut tarih ve saat
+    current_date = datetime.now()
 
     try:
         driver.get(events_url)
@@ -120,11 +144,8 @@ def scrape_youthall_events():
 
         for card in event_cards:
             title = "Başlık Bulunamadı"
-            link = "Link Bulunamadı"
-            image_url = "Resim Bulunamadı"
-            category = "Etkinlik"
-            status = "Açık"
-
+            link = None
+            
             link_element = card.find('a', href=True)
             if link_element and 'href' in link_element.attrs:
                 link = urljoin(base_url, link_element['href'].strip())
@@ -133,74 +154,42 @@ def scrape_youthall_events():
             if title_element and title_element.find('h2'):
                 title = title_element.find('h2').text.strip()
             
-            image_element = card.find('img') 
-            if image_element and 'src' in image_element.attrs:
-                raw_image_src = image_element['src'].strip()
-                if raw_image_src:
-                    image_url = raw_image_src 
 
-            all_list_items = card.find_all('li')
-            for li in all_list_items:
-                if li.find('i', class_='fa fa-hashtag'):
-                    category = li.text.replace('fa-hashtag', '').strip().replace('#', '').strip()
-                    break 
-            
-            event_start_date_str, event_end_date_str, application_deadline_str = "","",""
-            if link != "Link Bulunamadı":
+            event_start_date_str, event_end_date_str, application_deadline_str, location, description = "","","","",""
+            if link:
                 print(f"Youthall: Detayları çekmek için linke gidiliyor: {link}")
-                event_start_date_str, event_end_date_str, application_deadline_str = get_event_details(driver, link)
-            
+                event_start_date_str, event_end_date_str, application_deadline_str, location, description = get_event_details(driver, link)
+
             is_active = False
+            final_event_date_for_db = None
+
+            if application_deadline_str != "Son Başvuru Tarihi Bulunamadı" and application_deadline_str != "":
+                deadline_date = parse_turkish_date(application_deadline_str)
+                if deadline_date and deadline_date >= current_date.replace(hour=0, minute=0, second=0, microsecond=0): 
+                    is_active = True
+                    final_event_date_for_db = deadline_date
             
-            if application_deadline_str != "Son Başvuru Tarihi Bulunamadı":
-                try:
-                    deadline_date = parse_turkish_date(application_deadline_str)
-                    if deadline_date >= current_date.replace(hour=0, minute=0, second=0, microsecond=0): 
-                        is_active = True
-                    else:
-                        is_active = False
-                except ValueError:
-                    print(f"Youthall: Son başvuru tarihi parse edilemedi: {application_deadline_str}. Etkinlik pasif kabul ediliyor.")
-                    is_active = False
-            else:
-                if event_start_date_str != "Başlangıç Tarihi Bulunamadı":
-                    try:
-                        start_date = parse_turkish_date(event_start_date_str)
-                        end_date = parse_turkish_date(event_end_date_str) if event_end_date_str != "Bitiş Tarihi Bulunamadı" else start_date
-                        
-                        if (start_date <= current_date and end_date >= current_date) or (start_date > current_date):
-                            is_active = True
-                    except ValueError:
-                        print(f"Youthall: Etkinlik başlangıç/bitiş tarihi parse edilemedi: Başlangıç: {event_start_date_str}, Bitiş: {event_end_date_str}. Etkinlik pasif kabul ediliyor.")
-                        is_active = False
             
-            if is_active:
-                final_date = ""
-                if application_deadline_str != "Son Başvuru Tarihi Bulunamadı" and \
-                   parse_turkish_date(application_deadline_str) >= current_date.replace(hour=0, minute=0, second=0, microsecond=0):
-                    final_date = f"Son Başvuru: {application_deadline_str}"
-                elif event_start_date_str != "Başlangıç Tarihi Bulunamadı":
-                    final_date = f"Başlangıç: {event_start_date_str}"
+            if not is_active and event_start_date_str != "Başlangıç Tarihi Bulunamadı" and event_start_date_str != "":
+                start_date = parse_turkish_date(event_start_date_str)
+                end_date = parse_turkish_date(event_end_date_str) if event_end_date_str != "Bitiş Tarihi Bulunamadı" and event_end_date_str != "" else start_date
                 
-                date = final_date 
+                if start_date and (start_date > current_date or (end_date and end_date >= current_date)):
+                    is_active = True
+                    final_event_date_for_db = start_date
 
-                if title != "Başlık Bulunamadı" and link != "Link Bulunamadı":
-                    all_events.append({
-                        'title': title,
-                        'link': link,
-                        'date': date, 
-                        'category': category,
-                        'status': status,
-                        'image_url': image_url,
-                        'event_start_date': event_start_date_str, 
-                        'event_end_date': event_end_date_str,     
-                        'application_deadline': application_deadline_str 
-                    })
-                else:
-                    print(f"Hata: Geçersiz veya eksik bilgiye sahip etkinlik atlandı: {title}")
+            if is_active and title != "Başlık Bulunamadı" and link:
+                all_events.append({
+                    'title': title,
+                    'description': description,
+                    'date': final_event_date_for_db,
+                    'location': location,
+                    'url': link,
+                    'source': "Youthall",
+                    'is_active': True
+                })
             else:
-                print(f"Youthall: Geçmiş tarihli veya başvuru süresi dolmuş etkinlik atlandı: {title}")
-
+                print(f"Youthall: Geçmiş tarihli, başvuru süresi dolmuş veya eksik bilgiye sahip etkinlik atlandı: {title}")
 
         print(f"Youthall'dan {len(all_events)} aktif etkinlik başarıyla çekildi.")
         return all_events
@@ -218,15 +207,13 @@ if __name__ == "__main__":
     if open_events:
         print("\n--- Youthall Aktif Etkinlikler ---")
         for event in open_events:
-            print(f"Başlık: {event['title']}")
-            print(f"Link: {event['link']}")
-            print(f"Tarih (Liste Sayfasından): {event.get('date', 'Liste Tarihi Yok')}") 
-            print(f"Etkinlik Başlangıç Tarihi: {event['event_start_date']}")
-            print(f"Etkinlik Bitiş Tarihi: {event['event_end_date']}")
-            print(f"Son Başvuru Tarihi: {event['application_deadline']}")
-            print(f"Tür: {event['category']}")
-            print(f"Durum: {event['status']}")
-            print(f"Görsel URL: {event['image_url']}")
+            print(f"Başlık: {event.get('title')}")
+            print(f"Açıklama: {event.get('description')}")
+            print(f"Tarih: {event.get('date')}")
+            print(f"Konum: {event.get('location')}")
+            print(f"URL: {event.get('url')}")
+            print(f"Kaynak: {event.get('source')}")
+            print(f"Aktif mi: {event.get('is_active')}")
             print("------------------------------------")
     else:
         print("Youthall'da aktif etkinlik bulunamadı.")
