@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: event_scraper_db
+      POSTGRES_USER: app_user
+      POSTGRES_PASSWORD: ${DB_PASSWORD} 
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://app_user:${DB_PASSWORD}@db:5432/event_scraper_db
+    volumes:
+      - .:/app
+    ports:
+      - "5000:5000"
+    working_dir: /app
+    command: python3 run_daily_scrape.py
+    
+volumes:
+  postgres_data:
