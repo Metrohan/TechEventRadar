@@ -1,15 +1,16 @@
 services:
   app:
-    build: .
-    command: python app.py
-    volumes:
-      - .:/app
-      - app_data:/var/lib/app
-      - chrome_driver_cache:/root/.wdm
-    depends_on:
-      - db
+    # build: .
+    image: metehangnn/techeventradar:latest
+    container_name: techeventradar_app
+    restart: always
     env_file:
       - .env
+    volumes:
+      - eventradar_sock:/home/meto/TechEventRadar/eventradar.sock
+      - /etc/letsencrypt/:/etc/letsencrypt/
+    depends_on:
+      - db
     ports:
       - "5000:5000"
 
